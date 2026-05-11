@@ -305,6 +305,26 @@ def mark_downloaded() -> None:
     st.session_state.sb3_downloaded = True
 
 
+def reset_all_settings() -> None:
+    """設定を初期化して、先頭のアップロード状態に戻す。"""
+    st.session_state.project = None
+    st.session_state.original_sb3_bytes = None
+    st.session_state.original_filename = None
+    st.session_state.uploaded_key = None
+    st.session_state.target_index = 0
+    st.session_state.mode = "新規作成"
+    st.session_state.selected_var_id = None
+    st.session_state.var_name = ""
+    st.session_state.var_body = ""
+    st.session_state.last_loaded_key = None
+    st.session_state.message = "設定を初期化しました。先頭からやり直してください。"
+    st.session_state.download_bytes = None
+    st.session_state.download_filename = None
+    st.session_state.edit_applied = False
+    st.session_state.sb3_created = False
+    st.session_state.sb3_downloaded = False
+
+
 # ============================================================
 # 画面表示補助
 # ============================================================
@@ -351,7 +371,7 @@ inject_css()
 # アプリ本体
 # ============================================================
 
-st.title("Scratch sb3 変数改行編集ツール V.0.1")
+st.title("Scratch sb3 変数改行編集ツール")
 st.caption("Streamlit版：sb3内の変数に、改行やスペースを含む文字列を保存します。")
 
 with st.expander("使い方", expanded=False):
@@ -561,3 +581,9 @@ with st.expander("現在の変数一覧を確認", expanded=False):
             value = raw[1]
             st.markdown(f"**{name}**")
             st.code(str(value), language="text")
+
+st.divider()
+
+if st.button("（設定を初期化して）先頭に戻る", use_container_width=True):
+    reset_all_settings()
+    st.rerun()
