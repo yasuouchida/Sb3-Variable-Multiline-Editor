@@ -306,7 +306,7 @@ def mark_downloaded() -> None:
 
 
 def reset_all_settings() -> None:
-    """設定を初期化して、先頭のアップロード状態に戻す。"""
+    """設定を初期化して、1. sb3ファイルをアップロードの状態に戻す。"""
     st.session_state.project = None
     st.session_state.original_sb3_bytes = None
     st.session_state.original_filename = None
@@ -317,7 +317,7 @@ def reset_all_settings() -> None:
     st.session_state.var_name = ""
     st.session_state.var_body = ""
     st.session_state.last_loaded_key = None
-    st.session_state.message = "設定を初期化しました。先頭からやり直してください。"
+    st.session_state.message = "設定を初期化しました。1. sb3ファイルをアップロードからやり直してください。"
     st.session_state.download_bytes = None
     st.session_state.download_filename = None
     st.session_state.edit_applied = False
@@ -371,6 +371,7 @@ inject_css()
 # アプリ本体
 # ============================================================
 
+st.markdown('<a id="top"></a>', unsafe_allow_html=True)
 st.title("Scratch sb3 変数改行編集ツール")
 st.caption("Streamlit版：sb3内の変数に、改行やスペースを含む文字列を保存します。")
 
@@ -584,6 +585,7 @@ with st.expander("現在の変数一覧を確認", expanded=False):
 
 st.divider()
 
-if st.button("（設定を初期化して）先頭に戻る", use_container_width=True):
+if st.button("（設定を初期化して）1. sb3ファイルをアップロードに戻る", use_container_width=True):
     reset_all_settings()
+    st.markdown('<meta http-equiv="refresh" content="0; url=#top">', unsafe_allow_html=True)
     st.rerun()
