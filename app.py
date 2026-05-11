@@ -159,17 +159,9 @@ def target_display(index: int, target: dict[str, Any]) -> str:
 
 def variable_display(var_id: str, raw: Any) -> str:
     if isinstance(raw, list) and len(raw) >= 2:
-        name = str(raw[0])
-        value = raw[1]
-    else:
-        name = "未対応形式"
-        value = raw
+        return str(raw[0])
 
-    preview = str(value).replace("\n", "↵")
-    if len(preview) > 70:
-        preview = preview[:70] + "..."
-
-    return f"{name} = {preview}"
+    return "未対応形式"
 
 
 def variable_options(target: dict[str, Any]) -> list[tuple[str, str]]:
