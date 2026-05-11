@@ -374,7 +374,7 @@ inject_css()
 # ============================================================
 
 st.markdown('<a id="top"></a>', unsafe_allow_html=True)
-st.title("Scratch sb3 変数改行編集ツール")
+st.title("Scratch sb3 変数改行編集ツール V.0.1")
 st.caption("Streamlit版：sb3内の変数に、改行やスペースを含む文字列を保存します。")
 
 with st.expander("使い方", expanded=False):
