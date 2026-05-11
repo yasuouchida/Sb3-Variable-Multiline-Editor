@@ -5,11 +5,19 @@ Scratch sb3 変数改行編集ツール Streamlit版
 - ブラウザ上で .sb3 ファイルをアップロード
 - ステージ／スプライトをリストから選択
 - 「新規作成」または「既存の変数」を選択
+- 既存変数の場合、変数名だけをリストに表示して選択
+- 既存変数の内部IDは画面に表示しない
 - 既存変数の場合、古い内容を複数行テキストエリアに表示して編集
 - 編集欄には最初から END 行を用意
 - END より前の内容だけを変数値として保存
 - 半角スペース・全角スペース・行頭スペース・行末スペースを保持
 - 編集済み .sb3 をブラウザからダウンロード
+
+ボタン色の変化:
+- 初期状態: 「変数に反映」が明るい色、「sb3を作成」は控えめな色
+- 「変数に反映」後: 「変数に反映」が控えめな色、「sb3を作成」が明るい色
+- 「sb3を作成」後: 「sb3を作成」が控えめな色、「編集済みsb3をダウンロード」が明るい色
+- 「編集済みsb3をダウンロード」後: ダウンロードボタンが控えめな色になり、「現在の変数一覧を確認」を青色で表示
 
 実行方法:
 1. このファイルを app.py などの名前で保存
@@ -33,7 +41,6 @@ import io
 import json
 import uuid
 import zipfile
-from copy import deepcopy
 from typing import Any
 
 import streamlit as st
@@ -61,6 +68,7 @@ def init_session_state() -> None:
         "project": None,
         "original_sb3_bytes": None,
         "original_filename": None,
+        "uploaded_key": None,
         "target_index": 0,
         "mode": "新規作成",
         "selected_var_id": None,
@@ -72,6 +80,7 @@ def init_session_state() -> None:
         "download_filename": None,
         "edit_applied": False,
         "sb3_created": False,
+        "sb3_downloaded": False,
     }
 
     for key, value in defaults.items():
@@ -160,6 +169,10 @@ def target_display(index: int, target: dict[str, Any]) -> str:
 
 
 def variable_display(var_id: str, raw: Any) -> str:
+    """
+    既存変数選択欄に表示する文字列。
+    変数IDは表示せず、変数名だけを返す。
+    """
     if isinstance(raw, list) and len(raw) >= 2:
         return str(raw[0])
 
@@ -167,6 +180,10 @@ def variable_display(var_id: str, raw: Any) -> str:
 
 
 def variable_options(target: dict[str, Any]) -> list[tuple[str, str]]:
+    """
+    返り値は [(表示名, 変数ID), ...]。
+    表示名は変数名だけ、内部処理は変数IDで行う。
+    """
     variables = get_variables(target)
     options = []
 
@@ -215,6 +232,10 @@ def reset_editor_for_new_variable() -> None:
     st.session_state.last_loaded_key = None
 
 
+def make_loaded_key() -> str:
+    return f"{st.session_state.target_index}|{st.session_state.mode}|{st.session_state.selected_var_id}"
+
+
 def load_variable_into_editor(var_id: str) -> None:
     target = get_current_target()
     if target is None:
@@ -230,10 +251,6 @@ def load_variable_into_editor(var_id: str) -> None:
     st.session_state.var_name = str(raw[0])
     st.session_state.var_body = body_with_end_marker(raw[1])
     st.session_state.last_loaded_key = make_loaded_key()
-
-
-def make_loaded_key() -> str:
-    return f"{st.session_state.target_index}|{st.session_state.mode}|{st.session_state.selected_var_id}"
 
 
 def apply_variable_edit() -> None:
@@ -273,6 +290,7 @@ def apply_variable_edit() -> None:
     st.session_state.download_filename = None
     st.session_state.edit_applied = True
     st.session_state.sb3_created = False
+    st.session_state.sb3_downloaded = False
 
 
 def prepare_download() -> None:
@@ -291,9 +309,14 @@ def prepare_download() -> None:
         )
         st.session_state.download_filename = output_filename
         st.session_state.sb3_created = True
+        st.session_state.sb3_downloaded = False
         st.session_state.message = f"編集済みsb3を作成しました: {output_filename}"
     except Exception as e:
         st.session_state.message = f"保存に失敗しました: {e}"
+
+
+def mark_downloaded() -> None:
+    st.session_state.sb3_downloaded = True
 
 
 # ============================================================
@@ -346,7 +369,7 @@ with st.expander("使い方", expanded=False):
         3. `新規作成` または `既存の変数` を選びます。  
         4. 内容欄の `{END_MARKER}` より前に、変数へ保存したい内容を入力します。  
         5. `変数に反映` を押します。  
-        6. `sb3を作成` → `ダウンロード` の順に操作します。
+        6. `sb3を作成` → `編集済みsb3をダウンロード` の順に操作します。
 
         `{END_MARKER}` 行そのものと、それより後ろは保存されません。
         """
@@ -377,6 +400,7 @@ if uploaded_file is not None:
             st.session_state.download_filename = None
             st.session_state.edit_applied = False
             st.session_state.sb3_created = False
+            st.session_state.sb3_downloaded = False
         except Exception as e:
             st.session_state.project = None
             st.session_state.original_sb3_bytes = None
@@ -421,6 +445,9 @@ st.session_state.mode = st.selectbox(
 
 if previous_mode != st.session_state.mode:
     reset_editor_for_new_variable()
+    st.session_state.edit_applied = False
+    st.session_state.sb3_created = False
+    st.session_state.sb3_downloaded = False
 
 current_target = get_current_target()
 assert current_target is not None
@@ -446,6 +473,7 @@ if st.session_state.mode == "既存の変数":
         st.stop()
 
     option_ids = [var_id for _, var_id in options]
+    id_to_label = {var_id: label for label, var_id in options}
 
     if st.session_state.selected_var_id not in option_ids:
         st.session_state.selected_var_id = option_ids[0]
@@ -454,12 +482,15 @@ if st.session_state.mode == "既存の変数":
     selected_var_id = st.selectbox(
         "既存変数を選択",
         options=option_ids,
-        format_func=lambda var_id: {v: label for label, v in options}.get(var_id, var_id),
+        format_func=lambda var_id: id_to_label.get(var_id, ""),
         index=option_ids.index(st.session_state.selected_var_id),
     )
 
     if selected_var_id != st.session_state.selected_var_id:
         load_variable_into_editor(selected_var_id)
+        st.session_state.edit_applied = False
+        st.session_state.sb3_created = False
+        st.session_state.sb3_downloaded = False
 
 else:
     if st.session_state.last_loaded_key != make_loaded_key():
@@ -483,7 +514,9 @@ st.session_state.var_body = st.text_area(
 col1, col2 = st.columns([1, 2])
 
 apply_button_type = "secondary" if st.session_state.edit_applied else "primary"
-create_button_type = "secondary" if st.session_state.sb3_created else ("primary" if st.session_state.edit_applied else "secondary")
+create_button_type = "secondary" if st.session_state.sb3_created else (
+    "primary" if st.session_state.edit_applied else "secondary"
+)
 
 with col1:
     if st.button("変数に反映", type=apply_button_type, use_container_width=True):
@@ -496,16 +529,27 @@ with col2:
         st.rerun()
 
 if st.session_state.download_bytes is not None:
+    download_button_type = "secondary" if st.session_state.sb3_downloaded else (
+        "primary" if st.session_state.sb3_created else "secondary"
+    )
+
     st.download_button(
         label="編集済みsb3をダウンロード",
         data=st.session_state.download_bytes,
         file_name=st.session_state.download_filename,
         mime="application/octet-stream",
-        type="primary" if st.session_state.sb3_created else "secondary",
+        type=download_button_type,
         use_container_width=True,
+        on_click=mark_downloaded,
     )
 
 st.divider()
+
+if st.session_state.sb3_downloaded:
+    st.markdown(
+        '<span style="color:#1f77b4; font-weight:700; font-size:1.05rem;">現在の変数一覧を確認</span>',
+        unsafe_allow_html=True,
+    )
 
 with st.expander("現在の変数一覧を確認", expanded=False):
     if not options:
