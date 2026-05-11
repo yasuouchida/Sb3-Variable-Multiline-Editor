@@ -71,6 +71,7 @@ def init_session_state() -> None:
         "download_bytes": None,
         "download_filename": None,
         "edit_applied": False,
+        "sb3_created": False,
     }
 
     for key, value in defaults.items():
@@ -271,6 +272,7 @@ def apply_variable_edit() -> None:
     st.session_state.download_bytes = None
     st.session_state.download_filename = None
     st.session_state.edit_applied = True
+    st.session_state.sb3_created = False
 
 
 def prepare_download() -> None:
@@ -288,6 +290,7 @@ def prepare_download() -> None:
             st.session_state.project,
         )
         st.session_state.download_filename = output_filename
+        st.session_state.sb3_created = True
         st.session_state.message = f"編集済みsb3を作成しました: {output_filename}"
     except Exception as e:
         st.session_state.message = f"保存に失敗しました: {e}"
@@ -373,6 +376,7 @@ if uploaded_file is not None:
             st.session_state.download_bytes = None
             st.session_state.download_filename = None
             st.session_state.edit_applied = False
+            st.session_state.sb3_created = False
         except Exception as e:
             st.session_state.project = None
             st.session_state.original_sb3_bytes = None
@@ -479,7 +483,7 @@ st.session_state.var_body = st.text_area(
 col1, col2 = st.columns([1, 2])
 
 apply_button_type = "secondary" if st.session_state.edit_applied else "primary"
-create_button_type = "primary" if st.session_state.edit_applied else "secondary"
+create_button_type = "secondary" if st.session_state.sb3_created else ("primary" if st.session_state.edit_applied else "secondary")
 
 with col1:
     if st.button("変数に反映", type=apply_button_type, use_container_width=True):
@@ -497,6 +501,7 @@ if st.session_state.download_bytes is not None:
         data=st.session_state.download_bytes,
         file_name=st.session_state.download_filename,
         mime="application/octet-stream",
+        type="primary" if st.session_state.sb3_created else "secondary",
         use_container_width=True,
     )
 
