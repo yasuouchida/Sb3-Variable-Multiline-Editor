@@ -46,7 +46,7 @@ import streamlit as st
 END_MARKER = "<<<END>>>"
 
 st.set_page_config(
-    page_title="Scratch sb3 変数改行編集ツール",
+    page_title="Scratch sb3 変数改行編集ツール V.0.1",
     page_icon="🧩",
     layout="wide",
 )
