@@ -70,6 +70,7 @@ def init_session_state() -> None:
         "original_sb3_bytes": None,
         "original_filename": None,
         "uploaded_key": None,
+        "uploader_reset_count": 0,
         "target_index": 0,
         "mode": "新規作成",
         "selected_var_id": None,
@@ -311,6 +312,7 @@ def reset_all_settings() -> None:
     st.session_state.original_sb3_bytes = None
     st.session_state.original_filename = None
     st.session_state.uploaded_key = None
+    st.session_state.uploader_reset_count += 1
     st.session_state.target_index = 0
     st.session_state.mode = "新規作成"
     st.session_state.selected_var_id = None
@@ -393,7 +395,11 @@ with st.expander("使い方", expanded=False):
 show_space_note()
 st.caption(f"終了記号 {END_MARKER} は本文入力欄の直下に固定表示され、編集できません。")
 
-uploaded_file = st.file_uploader("1. sb3ファイルをアップロード", type=["sb3"])
+uploaded_file = st.file_uploader(
+    "1. sb3ファイルをアップロード",
+    type=["sb3"],
+    key=f"sb3_uploader_{st.session_state.uploader_reset_count}",
+)
 
 if uploaded_file is not None:
     uploaded_bytes = uploaded_file.getvalue()
