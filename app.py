@@ -330,7 +330,7 @@ inject_css()
 # アプリ本体
 # ============================================================
 
-st.title("Scratch sb3 変数改行編集ツール V.0.1")
+st.title("Scratch sb3 変数改行編集ツール")
 st.caption("Streamlit版：sb3内の変数に、改行やスペースを含む文字列を保存します。")
 
 with st.expander("使い方", expanded=False):
@@ -447,7 +447,7 @@ if st.session_state.mode == "既存の変数":
     selected_var_id = st.selectbox(
         "既存変数を選択",
         options=option_ids,
-        format_func=lambda var_id: dict(options).get(var_id, var_id),
+        format_func=lambda var_id: {v: label for label, v in options}.get(var_id, var_id),
         index=option_ids.index(st.session_state.selected_var_id),
     )
 
