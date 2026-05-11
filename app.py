@@ -8,8 +8,8 @@ Scratch sb3 変数改行編集ツール Streamlit版
 - 既存変数の場合、変数名だけをリストに表示して選択
 - 既存変数の内部IDは画面に表示しない
 - 既存変数の場合、古い内容を複数行テキストエリアに表示して編集
-- 編集欄には最初から END 行を用意
-- END より前の内容だけを変数値として保存
+- 本文入力欄の下に、編集不可の END 行を固定表示
+- 本文入力欄の内容だけを変数値として保存
 - 半角スペース・全角スペース・行頭スペース・行末スペースを保持
 - 編集済み .sb3 をブラウザからダウンロード
 
@@ -28,9 +28,9 @@ Scratch sb3 変数改行編集ツール Streamlit版
 
 注意:
 - END 行は保存終了位置を示す目印です。
-- END より後ろの文字列は保存されません。
-- END 行そのものも変数には保存されません。
-- END より前のスペースは、行頭・行末を含めてそのまま保存されます。
+- END 行は編集できない固定表示です。
+- END 行そのものは変数には保存されません。
+- 本文入力欄のスペースは、行頭・行末を含めてそのまま保存されます。
 - Scratch の .sb3 は ZIP 形式です。
 - 本ツールは ZIP 内の project.json の variables を編集します。
 """
@@ -73,7 +73,7 @@ def init_session_state() -> None:
         "mode": "新規作成",
         "selected_var_id": None,
         "var_name": "",
-        "var_body": END_MARKER,
+        "var_body": "",
         "last_loaded_key": None,
         "message": "",
         "download_bytes": None,
@@ -194,41 +194,31 @@ def variable_options(target: dict[str, Any]) -> list[tuple[str, str]]:
     return options
 
 
-def parse_text_before_end(text: str) -> tuple[str, bool]:
+def parse_text_body(text: str) -> str:
     """
-    複数行編集欄から END_MARKER より前の内容だけを取り出す。
+    本文入力欄の内容をそのまま変数値として取り出す。
 
     重要:
+    - END_MARKER は編集不可の固定表示として別に表示する。
+    - 入力欄には END_MARKER を含めない。
     - strip() や rstrip() は使わない。
     - 半角スペース、全角スペース、行頭スペース、行末スペースを保持する。
-    - ただし、END_MARKER を別行に置くための直前の改行だけは除く。
     """
-    if END_MARKER not in text:
-        return text, False
-
-    before = text.split(END_MARKER, 1)[0]
-
-    # END直前の改行だけを除く。
-    # 行頭・行末のスペースは削らない。
-    if before.endswith("\n"):
-        before = before[:-1]
-
-    return before, True
+    return text
 
 
-def body_with_end_marker(body: Any) -> str:
-    body_text = "" if body is None else str(body)
-
-    if body_text:
-        return body_text + "\n" + END_MARKER
-
-    return END_MARKER
+def body_for_editor(body: Any) -> str:
+    """
+    既存変数の本文だけを編集欄に戻す。
+    END_MARKER は編集不可の固定表示として別に表示する。
+    """
+    return "" if body is None else str(body)
 
 
 def reset_editor_for_new_variable() -> None:
     st.session_state.selected_var_id = None
     st.session_state.var_name = ""
-    st.session_state.var_body = END_MARKER
+    st.session_state.var_body = ""
     st.session_state.last_loaded_key = None
 
 
@@ -249,7 +239,7 @@ def load_variable_into_editor(var_id: str) -> None:
 
     st.session_state.selected_var_id = var_id
     st.session_state.var_name = str(raw[0])
-    st.session_state.var_body = body_with_end_marker(raw[1])
+    st.session_state.var_body = body_for_editor(raw[1])
     st.session_state.last_loaded_key = make_loaded_key()
 
 
@@ -265,7 +255,7 @@ def apply_variable_edit() -> None:
         st.session_state.message = "変数名を入力してください。"
         return
 
-    value, has_end = parse_text_before_end(st.session_state.var_body)
+    value = parse_text_body(st.session_state.var_body)
     variables = get_variables(target)
 
     if st.session_state.mode == "新規作成":
@@ -281,10 +271,6 @@ def apply_variable_edit() -> None:
 
         variables[var_id] = [name, value]
         st.session_state.message = f"既存変数「{name}」を更新しました。"
-
-    if not has_end:
-        st.session_state.var_body = st.session_state.var_body + "\n" + END_MARKER
-        st.session_state.message += f"\n注意: {END_MARKER} がなかったため、末尾に自動追加しました。"
 
     st.session_state.download_bytes = None
     st.session_state.download_filename = None
@@ -333,7 +319,7 @@ def show_message() -> None:
 
 def show_space_note() -> None:
     st.info(
-        "内容欄では、ENDより前の半角スペース・全角スペース・行頭スペース・行末スペースを保持します。"
+        "本文入力欄では、半角スペース・全角スペース・行頭スペース・行末スペースを保持します。"
     )
 
 
@@ -367,15 +353,17 @@ with st.expander("使い方", expanded=False):
         1. `.sb3`ファイルをアップロードします。  
         2. 対象のステージまたはスプライトを選びます。  
         3. `新規作成` または `既存の変数` を選びます。  
-        4. 内容欄の `{END_MARKER}` より前に、変数へ保存したい内容を入力します。  
-        5. `変数に反映` を押します。  
-        6. `sb3を作成` → `編集済みsb3をダウンロード` の順に操作します。
+        4. 本文入力欄に、変数へ保存したい内容を入力します。  
+        5. 本文入力欄の下にある `{END_MARKER}` は固定表示で、編集できません。  
+        6. `変数に反映` を押します。  
+        7. `sb3を作成` → `編集済みsb3をダウンロード` の順に操作します。
 
-        `{END_MARKER}` 行そのものと、それより後ろは保存されません。
+        `{END_MARKER}` 行そのものは保存されません。
         """
     )
 
 show_space_note()
+st.caption(f"終了記号 {END_MARKER} は本文入力欄の下に固定表示され、編集できません。")
 
 uploaded_file = st.file_uploader("1. sb3ファイルをアップロード", type=["sb3"])
 
@@ -394,7 +382,7 @@ if uploaded_file is not None:
             st.session_state.mode = "新規作成"
             st.session_state.selected_var_id = None
             st.session_state.var_name = ""
-            st.session_state.var_body = END_MARKER
+            st.session_state.var_body = ""
             st.session_state.message = f"読み込み完了: {uploaded_file.name}"
             st.session_state.download_bytes = None
             st.session_state.download_filename = None
@@ -505,10 +493,16 @@ st.session_state.var_name = st.text_input(
 )
 
 st.session_state.var_body = st.text_area(
-    f"内容（{END_MARKER} より前だけ保存）",
+    "内容（ここに入力した本文だけ保存）",
     value=st.session_state.var_body,
     height=360,
-    help="行頭・行末のスペースも保持します。END行そのものは保存しません。",
+    help="行頭・行末のスペースも保持します。終了記号そのものは保存しません。",
+)
+
+st.text_input(
+    "終了記号（固定・編集不可）",
+    value=END_MARKER,
+    disabled=True,
 )
 
 col1, col2 = st.columns([1, 2])
