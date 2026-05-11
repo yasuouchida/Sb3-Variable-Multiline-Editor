@@ -8,7 +8,8 @@ Scratch sb3 変数改行編集ツール Streamlit版
 - 既存変数の場合、変数名だけをリストに表示して選択
 - 既存変数の内部IDは画面に表示しない
 - 既存変数の場合、古い内容を複数行テキストエリアに表示して編集
-- 本文入力欄の下に、編集不可の END 行を固定表示
+- 本文入力欄の直下に、編集不可の END 行を固定表示
+- END 部分にはカーソルが移動しない
 - 本文入力欄の内容だけを変数値として保存
 - 半角スペース・全角スペース・行頭スペース・行末スペースを保持
 - 編集済み .sb3 をブラウザからダウンロード
@@ -200,7 +201,6 @@ def parse_text_body(text: str) -> str:
 
     重要:
     - END_MARKER は編集不可の固定表示として別に表示する。
-    - 入力欄には END_MARKER を含めない。
     - strip() や rstrip() は使わない。
     - 半角スペース、全角スペース、行頭スペース、行末スペースを保持する。
     """
@@ -331,6 +331,13 @@ def inject_css() -> None:
             font-family: Consolas, "Courier New", monospace !important;
             white-space: pre !important;
         }
+        div[data-testid="stTextInput"] input:disabled {
+            font-family: Consolas, "Courier New", monospace !important;
+            color: #333333 !important;
+            -webkit-text-fill-color: #333333 !important;
+            background-color: #f3f4f6 !important;
+            opacity: 1 !important;
+        }
         </style>
         """,
         unsafe_allow_html=True,
@@ -354,7 +361,7 @@ with st.expander("使い方", expanded=False):
         2. 対象のステージまたはスプライトを選びます。  
         3. `新規作成` または `既存の変数` を選びます。  
         4. 本文入力欄に、変数へ保存したい内容を入力します。  
-        5. 本文入力欄の下にある `{END_MARKER}` は固定表示で、編集できません。  
+        5. 本文入力欄の直下にある `{END_MARKER}` は固定表示で、カーソルは移動しません。  
         6. `変数に反映` を押します。  
         7. `sb3を作成` → `編集済みsb3をダウンロード` の順に操作します。
 
@@ -363,7 +370,7 @@ with st.expander("使い方", expanded=False):
     )
 
 show_space_note()
-st.caption(f"終了記号 {END_MARKER} は本文入力欄の下に固定表示され、編集できません。")
+st.caption(f"終了記号 {END_MARKER} は本文入力欄の直下に固定表示され、編集できません。")
 
 uploaded_file = st.file_uploader("1. sb3ファイルをアップロード", type=["sb3"])
 
@@ -482,7 +489,6 @@ if st.session_state.mode == "既存の変数":
 
 else:
     if st.session_state.last_loaded_key != make_loaded_key():
-        # 新規作成画面に来たときに、古い既存変数の内容が残らないようにする。
         reset_editor_for_new_variable()
         st.session_state.last_loaded_key = make_loaded_key()
 
@@ -493,7 +499,7 @@ st.session_state.var_name = st.text_input(
 )
 
 st.session_state.var_body = st.text_area(
-    "内容（ここに入力した本文だけ保存）",
+    "内容（この欄に入力した本文だけ保存）",
     value=st.session_state.var_body,
     height=360,
     help="行頭・行末のスペースも保持します。終了記号そのものは保存しません。",
