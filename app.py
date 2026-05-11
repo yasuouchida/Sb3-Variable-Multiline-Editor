@@ -70,6 +70,7 @@ def init_session_state() -> None:
         "message": "",
         "download_bytes": None,
         "download_filename": None,
+        "edit_applied": False,
     }
 
     for key, value in defaults.items():
@@ -269,6 +270,7 @@ def apply_variable_edit() -> None:
 
     st.session_state.download_bytes = None
     st.session_state.download_filename = None
+    st.session_state.edit_applied = True
 
 
 def prepare_download() -> None:
@@ -370,6 +372,7 @@ if uploaded_file is not None:
             st.session_state.message = f"読み込み完了: {uploaded_file.name}"
             st.session_state.download_bytes = None
             st.session_state.download_filename = None
+            st.session_state.edit_applied = False
         except Exception as e:
             st.session_state.project = None
             st.session_state.original_sb3_bytes = None
@@ -475,13 +478,16 @@ st.session_state.var_body = st.text_area(
 
 col1, col2 = st.columns([1, 2])
 
+apply_button_type = "secondary" if st.session_state.edit_applied else "primary"
+create_button_type = "primary" if st.session_state.edit_applied else "secondary"
+
 with col1:
-    if st.button("変数に反映", type="primary", use_container_width=True):
+    if st.button("変数に反映", type=apply_button_type, use_container_width=True):
         apply_variable_edit()
         st.rerun()
 
 with col2:
-    if st.button("sb3を作成", use_container_width=True):
+    if st.button("sb3を作成", type=create_button_type, use_container_width=True):
         prepare_download()
         st.rerun()
 
